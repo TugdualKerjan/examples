@@ -11,5 +11,6 @@ dependencies = [
     "optax>=0.2.4",
     "torch>=2.0.1",
     "torchvision>=0.15.2",
+    "tqdm>=4.67.1",
     "wget>=3.2",
 ]

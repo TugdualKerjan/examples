@@ -1,10 +1,10 @@
 from convnet import VGG11
 from dataset import get_dataloaders
 import jax
-
+import jax.numpy as jnp
 import equinox as eqx
 import optax
-
+from tqdm import tqdm
 jax.config.update("jax_disable_jit", True)
 jax.config.update("jax_debug_nans", True)
 
@@ -23,23 +23,21 @@ optimizer = optax.adam(LEARNING_RATE)
 
 opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
 
-# @eqx.filter_jit
+@eqx.filter_jit
 def loss(model, x, y):
     res = jax.vmap(model)(x)
-    return optax.sigmoid_binary_cross_entropy(res, jax.nn.one_hot(y, 1000))
+    return jnp.mean(optax.sigmoid_binary_cross_entropy(res, jax.nn.one_hot(y, 1000)))
 
 def step(model, opt_state, optimizer: optax.GradientTransformation, x, y):
     loss_value, grads = eqx.filter_value_and_grad(loss)(model, x, y)
     updates, opt_state = optimizer.update(grads, opt_state, eqx.filter(model, eqx.is_array))
     model = eqx.apply_updates(model, updates)
-    print("?")
     return model, opt_state, loss_value
 
 for epoch in range(0, EPOCHS):
     
-    for x, y in train_dataloader:
+    for x, y in tqdm(train_dataloader):
         x, y = x.numpy(), y.numpy()
-        print("H")
         model, opt_state, loss_value = step(model, opt_state, optimizer, x, y)
         print(f"Train Ministep: Loss: {loss_value}")
 

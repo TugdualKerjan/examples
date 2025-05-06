@@ -13,26 +13,11 @@ class ConvMax(eqx.Module):
         self.conv = nn.Conv2d(in_chan, out_chan, kernel_size, padding=padding, key=key)
         self.pool = nn.MaxPool2d(2, 2, 0)
         
+    @eqx.filter_jit
     def __call__(self, x):
-        print(self.conv)
-        print(f"Input shape: {x.shape}, dtype: {x.dtype}")
-        
-        try:
-            y = self.conv(x)
-            print("Convolution successful")
-        except Exception as e:
-            print(f"Error in convolution: {e}")
-            # Print more debug info
-            print(f"Conv input channels: {self.conv.in_channels}")
-            print(f"Conv output channels: {self.conv.out_channels}")
-            print(f"Conv kernel shape: {self.conv.weight.shape}")
-            raise  # Re-raise to see stack trace
-        
-        print("ARST")
+        y = self.conv(x)
         y = jax.nn.relu(y)
-        print("ARST2")
         y = self.pool(y)
-        print("ARS")
         return y
 
 class VGG11(eqx.Module):
@@ -64,13 +49,12 @@ class VGG11(eqx.Module):
             nn.Linear(4096, 1000, key=k11),
         ]
     
+    @eqx.filter_jit
     def __call__(self, x):
         # Print input shape
-        print("Input shape:", x.shape)
         
         # Remove print statements in the forward pass for JIT compatibility
         y = self.layer_1(x)
-        print("W")
         y = self.layer_2(y)
         y = jax.nn.relu(self.layer_3(y))
         y = self.layer_4(y)
@@ -78,8 +62,11 @@ class VGG11(eqx.Module):
         y = self.layer_6(y)
         y = jax.nn.relu(self.layer_7(y))
         y = self.layer_8(y)
+        print(y.shape)
         y = self.avg(y)
-        y = jnp.reshape(y, (y.shape[0], -1))  # Flatten properly preserving batch dimension
+        print(y.shape)
+        y = jnp.reshape(y, -1)  # Flatten properly preserving batch dimension
+        print(y.shape)
         
         for layer in self.classifier:
             y = jax.nn.relu(layer(y))
